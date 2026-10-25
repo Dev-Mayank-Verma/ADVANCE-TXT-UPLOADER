@@ -25,14 +25,12 @@ from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 import yt_dlp as youtube_dl
-import cloudscraper
 import m3u8
 import core as helper
 from utils import progress_bar
 from vars import API_ID, API_HASH, BOT_TOKEN
 from aiohttp import ClientSession
 from pyromod import listen
-from subprocess import getstatusoutput
 from pytube import YouTube
 
 from pyrogram import Client, filters
@@ -41,10 +39,9 @@ from pyrogram.errors import FloodWait
 from pyrogram.errors.exceptions.bad_request_400 import StickerEmojiInvalid
 from pyrogram.types.messages_and_media import message
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 cookies_file_path = os.getenv("COOKIES_FILE_PATH", "youtube_cookies.txt")
 
-#pwimg = "https://graph.org/file/8add8d382169e326f67e0-3bf38f92e52955e977.jpg"
-#ytimg = "https://graph.org/file/3aa806c302ceec62e6264-60ced740281395f68f.jpg"
 cpimg = "https://graph.org/file/5ed50675df0faf833efef-e102210eb72c1d5a17.jpg"  
 
 
@@ -67,7 +64,7 @@ def is_authorized(user_id: int) -> bool:
     return (
         user_id == OWNER_ID
         or user_id in SUDO_USERS
-        or user_id in AUTH_CHANNELS  # ✅ Checks if user_id matches any channel ID
+        or user_id in AUTH_CHANNELS
     )
 
 
@@ -132,7 +129,6 @@ image_urls = [
     "https://graph.org/file/439c62c6244b05050c93b-f02497c99181cdead5.jpg",
 ]
 random_image_url = random.choice(image_urls) 
-# Caption for the image
 caption = (
         "**ʜᴇʟʟᴏ👋**\n\n"
         "➠ **ɪ ᴀᴍ ᴛxᴛ ᴛᴏ ᴠɪᴅᴇᴏ ᴜᴘʟᴏᴀᴅᴇʀ ʙᴏᴛ.**\n"
@@ -140,12 +136,10 @@ caption = (
         "➠ **ғᴏʀ ɢᴜɪᴅᴇ sᴇɴᴅ /help."
 )
     
-# Start command handler
 @bot.on_message(filters.command(["start"]))
 async def start_command(bot: Client, message: Message):
     await bot.send_photo(chat_id=message.chat.id, photo=random_image_url, caption=caption, reply_markup=keyboard)
     
-# Stop command handler
 @bot.on_message(filters.command("stop"))
 async def restart_handler(_, m: Message):
     await m.reply_text("**𝗦𝘁𝗼𝗽𝗽𝗲𝗱**🚦", True)
@@ -167,89 +161,67 @@ async def cookies_handler(client: Client, m: Message):
     if not is_authorized(m.from_user.id):
         await m.reply_text("🚫 You are not authorized to use this command.")
         return
-    """
-    Command: /cookies
-    Allows any user to upload a cookies file dynamically.
-    """
+    
     await m.reply_text(
         "𝗣𝗹𝗲𝗮𝘀𝗲 𝗨𝗽𝗹𝗼𝗮𝗱 𝗧𝗵𝗲 𝗖𝗼𝗼𝗸𝗶𝗲𝘀 𝗙𝗶𝗹𝗲 (.𝘁𝘅𝘁 𝗳𝗼𝗿𝗺𝗮𝘁).",
         quote=True
     )
 
     try:
-        # Wait for the user to send the cookies file
         input_message: Message = await client.listen(m.chat.id)
 
-        # Validate the uploaded file
         if not input_message.document or not input_message.document.file_name.endswith(".txt"):
             await m.reply_text("Invalid file type. Please upload a .txt file.")
             return
 
-        # Download the cookies file
         downloaded_path = await input_message.download()
 
-        # Read the content of the uploaded file
         with open(downloaded_path, "r") as uploaded_file:
             cookies_content = uploaded_file.read()
 
-        # Replace the content of the target cookies file
         with open(COOKIES_FILE_PATH, "w") as target_file:
             target_file.write(cookies_content)
 
         await input_message.reply_text(
-            "✅ 𝗖𝗼𝗼𝗸𝗶𝗲𝘀 𝗨𝗽𝗱𝗮𝘁𝗲𝗱 𝗦𝘂𝗰𝗰𝗲𝘀𝘀𝗳𝘂𝗹𝗹𝘆.\n\𝗻📂 𝗦𝗮𝘃𝗲𝗱 𝗜𝗻 youtube_cookies.txt."
+            "✅ 𝗖𝗼𝗼𝗸𝗶𝗲𝘀 𝗨𝗽𝗱𝗮𝘁𝗲𝗱 𝗦𝘂𝗰𝗰𝗲𝘀𝘀𝗳𝘂𝗹𝗹𝘆.\n\n📂 𝗦𝗮𝘃𝗲𝗱 𝗜𝗻 youtube_cookies.txt."
         )
 
     except Exception as e:
         await m.reply_text(f"⚠️ An error occurred: {str(e)}")
 
-# Define paths for uploaded file and processed file
 UPLOAD_FOLDER = '/path/to/upload/folder'
 EDITED_FILE_PATH = '/path/to/save/edited_output.txt'
 
 @bot.on_message(filters.command('e2t'))
 async def edit_txt(client, message: Message):
-    
-
-    # Prompt the user to upload the .txt file
     await message.reply_text(
         "🎉 **Welcome to the .txt File Editor!**\n\n"
         "Please send your `.txt` file containing subjects, links, and topics."
     )
 
-    # Wait for the user to upload the file
     input_message: Message = await bot.listen(message.chat.id)
     if not input_message.document:
         await message.reply_text("🚨 **Error**: Please upload a valid `.txt` file.")
         return
 
-    # Get the file name
     file_name = input_message.document.file_name.lower()
-
-    # Define the path where the file will be saved
     uploaded_file_path = os.path.join(UPLOAD_FOLDER, file_name)
-
-    # Download the file
     uploaded_file = await input_message.download(uploaded_file_path)
 
-    # After uploading the file, prompt the user for the file name or 'd' for default
     await message.reply_text(
         "🔄 **Send your .txt file name, or type 'd' for the default file name.**"
     )
 
-    # Wait for the user's response
     user_response: Message = await bot.listen(message.chat.id)
     if user_response.text:
         user_response_text = user_response.text.strip().lower()
         if user_response_text == 'd':
-            # Handle default file name logic (e.g., use the original file name)
             final_file_name = file_name
         else:
             final_file_name = user_response_text + '.txt'
     else:
-        final_file_name = file_name  # Default to the uploaded file name
+        final_file_name = file_name
 
-    # Read and process the uploaded file
     try:
         with open(uploaded_file, 'r', encoding='utf-8') as f:
             content = f.readlines()
@@ -257,49 +229,39 @@ async def edit_txt(client, message: Message):
         await message.reply_text(f"🚨 **Error**: Unable to read the file.\n\nDetails: {e}")
         return
 
-    # Parse the content into subjects with links and topics
     subjects = {}
     current_subject = None
     for line in content:
         line = line.strip()
         if line and ":" in line:
-            # Split the line by the first ":" to separate title and URL
             title, url = line.split(":", 1)
             title, url = title.strip(), url.strip()
 
-            # Add the title and URL to the dictionary
             if title in subjects:
                 subjects[title]["links"].append(url)
             else:
                 subjects[title] = {"links": [url], "topics": []}
 
-            # Set the current subject
             current_subject = title
         elif line.startswith("-") and current_subject:
-            # Add topics under the current subject
             subjects[current_subject]["topics"].append(line.strip("- ").strip())
 
-    # Sort the subjects alphabetically and topics within each subject
     sorted_subjects = sorted(subjects.items())
     for title, data in sorted_subjects:
         data["topics"].sort()
 
-    # Save the edited file to the defined path with the final file name
     try:
         final_file_path = os.path.join(UPLOAD_FOLDER, final_file_name)
         with open(final_file_path, 'w', encoding='utf-8') as f:
             for title, data in sorted_subjects:
-                # Write title and its links
                 for link in data["links"]:
                     f.write(f"{title}:{link}\n")
-                # Write topics under the title
                 for topic in data["topics"]:
                     f.write(f"- {topic}\n")
     except Exception as e:
         await message.reply_text(f"🚨 **Error**: Unable to write the edited file.\n\nDetails: {e}")
         return
 
-    # Send the sorted and edited file back to the user
     try:
         await message.reply_document(
             document=final_file_path,
@@ -308,29 +270,15 @@ async def edit_txt(client, message: Message):
     except Exception as e:
         await message.reply_text(f"🚨 **Error**: Unable to send the file.\n\nDetails: {e}")
     finally:
-        # Clean up the temporary file
         if os.path.exists(uploaded_file_path):
             os.remove(uploaded_file_path)
 
-from pytube import Playlist
-import youtube_dl
-
-# --- Configuration ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# --- Utility Functions ---
-
 def sanitize_filename(name):
-    """
-    Sanitizes a string to create a valid filename.
-    """
     return re.sub(r'[^\w\s-]', '', name).strip().replace(' ', '_')
 
 def get_videos_with_ytdlp(url):
-    """
-    Retrieves video titles and URLs using `yt-dlp`.
-    If a title is not available, only the URL is saved.
-    """
     ydl_opts = {
         'quiet': True,
         'extract_flat': True,
@@ -354,10 +302,6 @@ def get_videos_with_ytdlp(url):
         return None, None
 
 def save_to_file(videos, name):
-    """
-    Saves video titles and URLs to a .txt file.
-    If a title is unavailable, only the URL is saved.
-    """
     filename = f"{sanitize_filename(name)}.txt"
     with open(filename, 'w', encoding='utf-8') as file:
         for title, url in videos.items():
@@ -367,19 +311,13 @@ def save_to_file(videos, name):
                 file.write(f"{title}: {url}\n")
     return filename
 
-# --- Bot Command ---
-
 @bot.on_message(filters.command('yt2txt'))
 async def ytplaylist_to_txt(client: Client, message: Message):
-    """
-    Handles the extraction of YouTube playlist/channel videos and sends a .txt file.
-    """
     user_id = message.chat.id
     if user_id != OWNER_ID:
         await message.reply_text("**🚫 You are not authorized to use this command.\n\n🫠 This Command is only for owner.**")
         return
 
-    # Request YouTube URL
     await message.delete()
     editable = await message.reply_text("📥 **Please enter the YouTube Playlist Url :**")
     input_msg = await client.listen(editable.chat.id)
@@ -387,7 +325,6 @@ async def ytplaylist_to_txt(client: Client, message: Message):
     await input_msg.delete()
     await editable.delete()
 
-    # Process the URL
     title, videos = get_videos_with_ytdlp(youtube_url)
     if videos:
         file_name = save_to_file(videos, title)
@@ -399,8 +336,6 @@ async def ytplaylist_to_txt(client: Client, message: Message):
     else:
         await message.reply_text("⚠️ **Unable to retrieve videos. Please check the URL.**")
 
-        
-# List users command
 @bot.on_message(filters.command("userlist") & filters.user(SUDO_USERS))
 async def list_users(client: Client, msg: Message):
     if SUDO_USERS:
@@ -409,8 +344,6 @@ async def list_users(client: Client, msg: Message):
     else:
         await msg.reply_text("No sudo users.")
 
-
-# Help command
 @bot.on_message(filters.command("help"))
 async def help_command(client: Client, msg: Message):
     help_text = (
@@ -424,11 +357,9 @@ async def help_command(client: Client, msg: Message):
         "`/sudo add` - Add user or group or channel (owner)🎊\n\n"
         "`/sudo remove` - Remove user or group or channel (owner)❌\n\n"
         "`/userlist` - List of sudo user or group or channel📜\n\n"
-       
     )
     await msg.reply_text(help_text)
 
-# Upload command handler
 @bot.on_message(filters.command(["tushar"]))
 async def upload(bot: Client, m: Message):
     if not is_authorized(m.chat.id):
@@ -507,15 +438,12 @@ async def upload(bot: Client, m: Message):
         else: 
             res = "UN"
     except Exception:
-            res = "UN"
+        res = "UN"
     
-    
-
     await editable.edit("📛 𝗘𝗻𝘁𝗲𝗿 𝗬𝗼𝘂𝗿 𝗡𝗮𝗺𝗲 📛\n\n🐥 𝗦𝗲𝗻𝗱 `1` 𝗙𝗼𝗿 𝗨𝘀𝗲 𝗗𝗲𝗳𝗮𝘂𝗹𝘁 🐥")
     input3: Message = await bot.listen(editable.chat.id)
     raw_text3 = input3.text
     await input3.delete(True)
-    # Default credit message with link
     credit = "️[𝗧𝘂𝘀𝗵𝗮𝗿](https://t.me/newstudent1885)"
     if raw_text3 == '1':
         CR = '[𝗧𝘂𝘀𝗵𝗮𝗿](https://t.me/newstudent1885)'
@@ -524,39 +452,32 @@ async def upload(bot: Client, m: Message):
             text, link = raw_text3.split(',')
             CR = f'[{text.strip()}]({link.strip()})'
         except ValueError:
-            CR = raw_text3  # In case the input is not in the expected format, use the raw text
+            CR = raw_text3
     else:
         CR = credit
-    #highlighter  = f"️ ⁪⁬⁮⁮⁮"
-    #if raw_text3 == 'Robin':
-        #MR = highlighter 
-    #else:
-        #MR = raw_text3
    
     await editable.edit("**𝗘𝗻𝘁𝗲𝗿 𝗣𝘄 𝗧𝗼𝗸𝗲𝗻 𝗙𝗼𝗿 𝗣𝘄 𝗨𝗽𝗹𝗼𝗮𝗱𝗶𝗻𝗴 𝗼𝗿 𝗦𝗲𝗻𝗱 `3` 𝗙𝗼𝗿 𝗢𝘁𝗵𝗲𝗿𝘀**")
     input4: Message = await bot.listen(editable.chat.id)
     raw_text4 = input4.text
     await input4.delete(True)
-    if raw_text4 == 3:
-        MR = token
+    if raw_text4 == "3":
+        MR = ""
     else:
         MR = raw_text4
 
-    
-
     await editable.edit("𝗡𝗼𝘄 𝗦𝗲𝗻𝗱 𝗧𝗵𝗲 𝗧𝗵𝘂𝗺𝗯 𝗨𝗿𝗹 𝗘𝗴 » https://graph.org/file/13a89d77002442255efad-989ac290c1b3f13b44.jpg\n\n𝗢𝗿 𝗜𝗳 𝗗𝗼𝗻'𝘁 𝗪𝗮𝗻𝘁 𝗧𝗵𝘂𝗺𝗯𝗻𝗮𝗶𝗹 𝗦𝗲𝗻𝗱 = 𝗻𝗼")
-    input6 = message = await bot.listen(editable.chat.id)
-    raw_text6 = input6.text
+    input6: Message = await bot.listen(editable.chat.id)
+    thumb = input6.text
     await input6.delete(True)
     await editable.delete()
 
-    #thumb = input6.text
-    #if thumb.startswith("http://") or thumb.startswith("https://"):
-        #getstatusoutput(f"wget '{thumb}' -O 'thumb.jpg'")
-        #thumb = "thumb.jpg"
+    if thumb.startswith("http://") or thumb.startswith("https://"):
+        getstatusoutput(f"wget '{thumb}' -O 'thumb.jpg'")
+        thumb = "thumb.jpg"
     else:
-        thumb == "no"
-    failed_count =0
+        thumb = "no"
+
+    failed_count = 0
     if len(links) == 1:
         count = 1
     else:
@@ -564,7 +485,7 @@ async def upload(bot: Client, m: Message):
 
     try:
         for i in range(count - 1, len(links)):
-            V = links[i][1].replace("file/d/","uc?export=download&id=").replace("www.youtube-nocookie.com/embed", "youtu.be").replace("?modestbranding=1", "").replace("/view?usp=sharing","") # .replace("mpd","m3u8")
+            V = links[i][1].replace("file/d/","uc?export=download&id=").replace("www.youtube-nocookie.com/embed", "youtu.be").replace("?modestbranding=1", "").replace("/view?usp=sharing","")
             url = "https://" + V
 
             if "visionias" in url:
@@ -577,13 +498,13 @@ async def upload(bot: Client, m: Message):
                 url = f"https://dragoapi.vercel.app/video/{url}"
 
             elif 'videos.classplusapp' in url:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-             url = requests.get(f'https://api.classplusapp.com/cams/uploader/video/jw-signed-url?url={url}', headers={'x-access-token': 'eyJjb3Vyc2VJZCI6IjQ1NjY4NyIsInR1dG9ySWQiOm51bGwsIm9yZ0lkIjo0ODA2MTksImNhdGVnb3J5SWQiOm51bGx9'}).json()['url']                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                url = requests.get(f'https://api.classplusapp.com/cams/uploader/video/jw-signed-url?url={url}', headers={'x-access-token': 'eyJjb3Vyc2VJZCI6IjQ1NjY4NyIsInR1dG9ySWQiOm51bGwsIm9yZ0lkIjo0ODA2MTksImNhdGVnb3J5SWQiOm51bGx9'}).json()['url']                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
             elif "tencdn.classplusapp" in url or "media-cdn-alisg.classplusapp.com" in url or "videos.classplusapp" in url or "media-cdn.classplusapp" in url:
-             headers = {'Host': 'api.classplusapp.com', 'x-access-token': 'eyJjb3Vyc2VJZCI6IjQ1NjY4NyIsInR1dG9ySWQiOm51bGwsIm9yZ0lkIjo0ODA2MTksImNhdGVnb3J5SWQiOm51bGx9', 'user-agent': 'Mobile-Android', 'app-version': '1.4.37.1', 'api-version': '18', 'device-id': '5d0d17ac8b3c9f51', 'device-details': '2848b866799971ca_2848b8667a33216c_SDK-30', 'accept-encoding': 'gzip'}
-             params = (('url', f'{url}'),)
-             response = requests.get('https://api.classplusapp.com/cams/uploader/video/jw-signed-url', headers=headers, params=params)
-             url = response.json()['url']
+                headers = {'Host': 'api.classplusapp.com', 'x-access-token': 'eyJjb3Vyc2VJZCI6IjQ1NjY4NyIsInR1dG9ySWQiOm51bGwsIm9yZ0lkIjo0ODA2MTksImNhdGVnb3J5SWQiOm51bGx9', 'user-agent': 'Mobile-Android', 'app-version': '1.4.37.1', 'api-version': '18', 'device-id': '5d0d17ac8b3c9f51', 'device-details': '2848b866799971ca_2848b8667a33216c_SDK-30', 'accept-encoding': 'gzip'}
+                params = (('url', f'{url}'),)
+                response = requests.get('https://api.classplusapp.com/cams/uploader/video/jw-signed-url', headers=headers, params=params)
+                url = response.json()['url']
 
             elif "https://appx-transcoded-videos.livelearn.in/videos/rozgar-data/" in url:
                 url = url.replace("https://appx-transcoded-videos.livelearn.in/videos/rozgar-data/", "")
@@ -611,27 +532,18 @@ async def upload(bot: Client, m: Message):
                     url = ((m3u8.loads(requests.get(url).text)).data['playlists'][1]['uri']).replace(q+"/", x)
             
             elif "/master.mpd" in url or "d1d34p8vz63oiq" in url or "parentId" in url or "childId" in url:
-             id =  url.split("/")[-2]
-             url = f"https://anonymouspwplayer-554b25895c1a.herokuapp.com/pw?url={url}&token={raw_text4}"
+                id =  url.split("/")[-2]
+                url = f"https://anonymouspwplayer-554b25895c1a.herokuapp.com/pw?url={url}&token={raw_text4}"
                 
             name1 = links[i][0].replace("\t", "").replace(":", "").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "").replace("http", "").strip()
             name = f'{str(count).zfill(3)}) {name1[:60]}'
 
-            
             if 'khansirvod4.pc.cdn.bitgravity.com' in url:               
-               parts = url.split('/')               
-               part1 = parts[1]
-               part2 = parts[2]
-               part3 = parts[3] 
-               part4 = parts[4]
-               part5 = parts[5]
-               
-               print(f"PART1: {part1}")
-               print(f"PART2: {part2}")
-               print(f"PART3: {part3}")
-               print(f"PART4: {part4}")
-               print(f"PART5: {part5}")
-               url = f"https://kgs-v4.akamaized.net/kgs-cv/{part3}/{part4}/{part5}"
+                parts = url.split('/')               
+                part3 = parts[3] 
+                part4 = parts[4]
+                part5 = parts[5]
+                url = f"https://kgs-v4.akamaized.net/kgs-cv/{part3}/{part4}/{part5}"
            
             if "youtu" in url:
                 ytf = f"b[height<={raw_text2}][ext=mp4]/bv[height<={raw_text2}][ext=mp4]+ba[ext=m4a]/b[ext=mp4]"
@@ -646,7 +558,7 @@ async def upload(bot: Client, m: Message):
                 cmd = f'yt-dlp -o "{name}.mp4" "{url}"'
             
             elif "webvideos.classplusapp." in url:
-               cmd = f'yt-dlp --add-header "referer:https://web.classplusapp.com/" --add-header "x-cdn-tag:empty" -f "{ytf}" "{url}" -o "{name}.mp4"'
+                cmd = f'yt-dlp --add-header "referer:https://web.classplusapp.com/" --add-header "x-cdn-tag:empty" -f "{ytf}" "{url}" -o "{name}.mp4"'
           
             elif "youtube.com" in url or "youtu.be" in url:
                 cmd = f'yt-dlp --cookies youtube_cookies.txt -f "{ytf}" "{url}" -o "{name}".mp4'
@@ -656,8 +568,6 @@ async def upload(bot: Client, m: Message):
 
             try:  
                 cc = f'**[🎬] 𝗩𝗶𝗱_𝗜𝗱 : {str(count).zfill(3)}.\n\n☘️𝗧𝗶𝘁𝗹𝗲 𝗡𝗮𝗺𝗲 ➤ {name1}.({res}).𝔗𝔲𝔰𝔥𝔞𝔯.mkv\n\n📚𝗕𝗮𝘁𝗰𝗵 𝗡𝗮𝗺𝗲 ➤ {b_name}\n\n📥 𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤  {CR}**'
-                #cpw = f'**[🎬] 𝗩𝗶𝗱_𝗜𝗱 : {str(count).zfill(3)}.\n\n☘️𝗧𝗶𝘁𝗹𝗲 𝗡𝗮𝗺𝗲 ➤ {name1}.({res}).𝔗𝔲𝔰𝔥𝔞𝔯.mkv\n\n🔗𝗩𝗶𝗱𝗲𝗼 𝗨𝗿𝗹 ➤ <a href="{url}">__Click Here to Watch Video__</a>\n\n📚𝗕𝗮𝘁𝗰𝗵 𝗡𝗮𝗺𝗲 ➤ {b_name}\n\n📥 𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤  {CR}**'
-                #cyt = f'**[🎬] 𝗩𝗶𝗱_𝗜𝗱 : {str(count).zfill(3)}.\n\n☘️𝗧𝗶𝘁𝗹𝗲 𝗡𝗮𝗺𝗲 ➤ {name1}.({res}).𝔗𝔲𝔰𝔥𝔞𝔯.mp4\n\n🔗𝗩𝗶𝗱𝗲𝗼 𝗨𝗿𝗹 ➤ <a href="{url}">__Click Here to Watch Video__</a>\n\n📚𝗕𝗮𝘁𝗰𝗵 𝗡𝗮𝗺𝗲 ➤ {b_name}\n\n📥 𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤  {CR}**'
                 cpvod = f'**[🎬] 𝗩𝗶𝗱_𝗜𝗱 : {str(count).zfill(3)}.\n\n☘️𝗧𝗶𝘁𝗹𝗲 𝗡𝗮𝗺𝗲 ➤ {name1}.({res}).𝔗𝔲𝔰𝔥𝔞𝔯.mkv\n\n🔗𝗩𝗶𝗱𝗲𝗼 𝗨𝗿𝗹 ➤ <a href="{url}">__Click Here to Watch Video__</a>\n\n📚𝗕𝗮𝘁𝗰𝗵 𝗡𝗮𝗺𝗲 ➤ {b_name}\n\n📥 𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤  {CR}**'
                 cimg = f'**[📁] 𝗜𝗺𝗴_𝗜𝗱 : {str(count).zfill(3)}.\n\n☘️𝗧𝗶𝘁𝗹𝗲 𝗡𝗮𝗺𝗲 ➤ {name1}.𝔗𝔲𝔰𝔥𝔞𝔯.jpg\n\n📚𝗕𝗮𝘁𝗰𝗵 𝗡𝗮𝗺𝗲 ➤ {b_name}\n\n📥 𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤  {CR}**'
                 cczip = f'**[📁] 𝗣𝗱𝗳_𝗜𝗱 : {str(count).zfill(3)}.\n\n☘️𝗧𝗶𝘁𝗹𝗲 𝗡𝗮𝗺𝗲 ➤ {name1}.𝔗𝔲𝔰𝔥𝔞𝔯.zip\n\n📚𝗕𝗮𝘁𝗰𝗵 𝗡𝗮𝗺𝗲 ➤ {b_name}\n\n📥 𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤  {CR}**'
@@ -666,8 +576,8 @@ async def upload(bot: Client, m: Message):
                 if "drive" in url:
                     try:
                         ka = await helper.download(url, name)
-                        copy = await bot.send_document(chat_id=m.chat.id,document=ka, caption=cc1)
-                        count+=1
+                        copy = await bot.send_document(chat_id=m.chat.id, document=ka, caption=cc1)
+                        count += 1
                         os.remove(ka)
                         time.sleep(1)
                     except FloodWait as e:
@@ -678,27 +588,17 @@ async def upload(bot: Client, m: Message):
                 elif ".pdf" in url:
                     try:
                         await asyncio.sleep(4)
-        # Replace spaces with %20 in the URL
                         url = url.replace(" ", "%20")
- 
-        # Create a cloudscraper session
                         scraper = cloudscraper.create_scraper()
-
-        # Send a GET request to download the PDF
                         response = scraper.get(url)
 
-        # Check if the response status is OK
                         if response.status_code == 200:
-            # Write the PDF content to a file
                             with open(f'{name}.pdf', 'wb') as file:
                                 file.write(response.content)
 
-            # Send the PDF document
                             await asyncio.sleep(4)
                             copy = await bot.send_document(chat_id=m.chat.id, document=f'{name}.pdf', caption=cc1)
                             count += 1
-
-            # Remove the PDF file after sending
                             os.remove(f'{name}.pdf')
                         else:
                             await m.reply_text(f"Failed to download PDF: {response.status_code} {response.reason}")
@@ -707,72 +607,41 @@ async def upload(bot: Client, m: Message):
                         await m.reply_text(str(e))
                         time.sleep(e.x)
                         continue
-                        
-                #elif "muftukmall" in url:
-                    #try:
-                        #await bot.send_photo(chat_id=m.chat.id, photo=pwimg, caption=cpw)
-                        #count +=1
-                    #except Exception as e:
-                        #await m.reply_text(str(e))    
-                        #time.sleep(1)    
-                        #continue
-                
-                #elif "youtu" in url:
-                    #try:
-                        #await bot.send_photo(chat_id=m.chat.id, photo=ytimg, caption=cyt)
-                        #count +=1
-                    #except Exception as e:
-                        #await m.reply_text(str(e))    
-                        #time.sleep(1)    
-                        #continue
 
                 elif "media-cdn.classplusapp.com/drm/" in url:
                     try:
                         await bot.send_photo(chat_id=m.chat.id, photo=cpimg, caption=cpvod)
-                        count +=1
+                        count += 1
                     except Exception as e:
                         await m.reply_text(str(e))    
                         time.sleep(1)    
                         continue          
                         
-                
                 elif any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png"]):
                     try:
-                        await asyncio.sleep(4)  # Use asyncio.sleep for non-blocking sleep
-                        # Replace spaces with %20 in the URL
+                        await asyncio.sleep(4)
                         url = url.replace(" ", "%20")
-
-                        # Create a cloudscraper session for image download
                         scraper = cloudscraper.create_scraper()
-
-                        # Send a GET request to download the image
                         response = scraper.get(url)
 
-                        # Check if the response status is OK
                         if response.status_code == 200:
-                            # Write the image content to a file
-                            with open(f'{name}.jpg', 'wb') as file:  # Save as JPG (or PNG if you want)
+                            with open(f'{name}.jpg', 'wb') as file:
                                 file.write(response.content)
 
-                            # Send the image document
-                            await asyncio.sleep(2)  # Non-blocking sleep
+                            await asyncio.sleep(2)
                             copy = await bot.send_photo(chat_id=m.chat.id, photo=f'{name}.jpg', caption=cimg)
                             count += 1
-
-                            # Remove the image file after sending
                             os.remove(f'{name}.jpg')
-
                         else:
                             await m.reply_text(f"Failed to download Image: {response.status_code} {response.reason}")
 
                     except FloodWait as e:
                         await m.reply_text(str(e))
-                        await asyncio.sleep(2)  # Use asyncio.sleep for non-blocking sleep
-                        return  # Exit the function to avoid continuation  
-                    
+                        await asyncio.sleep(2)
+                        return  
                     except Exception as e:
                         await m.reply_text(f"An error occurred: {str(e)}")
-                        await asyncio.sleep(4)  # You can replace this with more specific 
+                        await asyncio.sleep(4)
                         
                 elif ".zip" in url:
                     try:
@@ -787,23 +656,11 @@ async def upload(bot: Client, m: Message):
                         time.sleep(e.x)
                         count += 1
                         continue
-                        
-                elif ".pdf" in url:
-                    try:
-                        cmd = f'yt-dlp -o "{name}.pdf" "{url}"'
-                        download_cmd = f"{cmd} -R 25 --fragment-retries 25"
-                        os.system(download_cmd)
-                        copy = await bot.send_document(chat_id=m.chat.id, document=f'{name}.pdf', caption=cc1)
-                        count += 1
-                        os.remove(f'{name}.pdf')
-                    except FloodWait as e:
-                        await m.reply_text(str(e))
-                        time.sleep(e.x)
-                        continue
+
                 else:
                     emoji_message = await show_random_emojis(message)
                     remaining_links = len(links) - count
-                    Show = f"**🍁 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗜𝗡𝗚 🍁**\n\n**📝ɴᴀᴍᴇ » ** `{name}\n\n🔗ᴛᴏᴛᴀʟ ᴜʀʟ » {len(links)}\n\n🗂️ɪɴᴅᴇx » {str(count)}/{len(links)}\n\n🌐ʀᴇᴍᴀɪɴɪɴɢ ᴜʀʟ » {remaining_links}\n\n❄ǫᴜᴀʟɪᴛʏ » {res}`\n\n**🔗ᴜʀʟ » ** `{url}`\n\n🤖𝗕𝗢𝗧 𝗠𝗔𝗗𝗘 𝗕𝗬 ➤ 𝗧𝗨𝗦𝗛𝗔𝗥"
+                    Show = f"**🍁 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗜𝗡𝗚 🍁**\n\n**📝ɴᴀᴍᴇ » ** `{name}\n\n🔗ᴛᴏᴛᱟʟ ᴜʀʟ » {len(links)}\n\n🗂️ɪɴᴅᴇx » {str(count)}/{len(links)}\n\n🌐ʀᴇᴍᴀɪɴɪɴɢ ᴜʀʟ » {remaining_links}\n\n❄ǫᴜᴀʟɪᴛʏ » {res}`\n\n**🔗ᴜʀʟ » ** `{url}`\n\n🤖𝗕𝗢𝗧 𝗠𝗔𝗗𝗘 𝗕𝗬 ➤ 𝗧𝗨𝗦𝗛𝗔𝗥"
                     prog = await m.reply_text(Show)
                     res_file = await helper.download_video(url, cmd, name)
                     filename = res_file
@@ -817,15 +674,13 @@ async def upload(bot: Client, m: Message):
                 await m.reply_text(f'‼️𝗗𝗼𝘄𝗻𝗹𝗼𝗮𝗱𝗶𝗻𝗴 𝗙𝗮𝗶𝗹𝗲𝗱‼️\n\n'
                                    f'📝𝗡𝗮𝗺𝗲 » `{name}`\n\n'
                                    f'🔗𝗨𝗿𝗹 » <a href="{url}">__**Click Here to See Link**__</a>`')
-                                   
                 count += 1
                 failed_count += 1
                 continue   
-                
 
     except Exception as e:
-        await m.reply_text(e)
-    #await m.reply_text("**🥳𝗦𝘂𝗰𝗰𝗲𝘀𝘀𝗳𝘂𝗹𝗹𝘆 𝗗𝗼𝗻𝗲🥳**")
+        await m.reply_text(str(e))
+
     await m.reply_text(f"`✨𝗕𝗔𝗧𝗖𝗛 𝗦𝗨𝗠𝗠𝗔𝗥𝗬✨\n\n"
                        f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
                        f"📛𝗜𝗻𝗱𝗲𝘅 𝗥𝗮𝗻𝗴𝗲 » ({raw_text} to {len(links)})\n"
@@ -839,5 +694,3 @@ async def upload(bot: Client, m: Message):
     await m.reply_text(f"<pre><code>📥𝗘𝘅𝘁𝗿𝗮𝗰𝘁𝗲𝗱 𝗕𝘆 ➤『{CR}』</code></pre>")          
 
 bot.run()
-if __name__ == "__main__":
-    asyncio.run(main())
